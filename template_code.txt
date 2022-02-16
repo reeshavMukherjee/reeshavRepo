@@ -1,0 +1,387 @@
+
+Public Sub AddARow()
+
+'--------------------VARIABLES-----------------------------
+Dim OpLoggedIn As Integer
+Dim OperatorName As String
+Dim CaseSelected As String
+Dim LastStepStatus As String
+Dim StartStep As String
+Dim lr As Long
+Dim iWarningLabels As Integer
+Dim checkContractSteps As String
+Dim CheckContract As Boolean
+Dim identifier As String
+
+'--------------------CLEAR WARNINGS-----------------------------
+Worksheets("ObservationTracker").Range("OpLogInWarning").Value = ""
+Worksheets("ObservationTracker").Range("ContractID_Warning").Value = ""
+Worksheets("ObservationTracker").Range("StartStepWarningLabel").Value = ""
+
+'--------------------VALIDATION-----------------------------
+OperatorName = Range("OperatorName").Value
+OpLoggedIn = 1
+If OperatorName = "" Then OpLoggedIn = 0
+
+CaseSelected = ""
+CaseSelected = Range("Extract").Value
+LastStepStatus = Worksheets("ObservationTracker").Range("LastStepStatus").Value
+StartStep = ""
+StartStep = Worksheets("ObservationTracker").Range("StartStep").Value
+
+
+'--------------------WORK-----------------------------
+If OpLoggedIn > 0 And CaseSelected <> "" And StartStep <> "" Then
+
+iRowL = Worksheets("Contracts").Cells(Rows.Count, 3).End(xlUp).Row
+Dim i As Integer
+    For i = 5 To iRowL
+        If Worksheets("Contracts").Cells(i, 3) = CaseSelected Then
+        contID = Worksheets("Contracts").Cells(i, 2).Value
+        Exit For
+        End If
+    Next i
+
+
+j = Application.WorksheetFunction.Match(StartStep, Worksheets("Parameters").Columns(3), 0)
+stepID = Worksheets("Parameters").Cells(j, 2).Value
+
+identifier = contID & "-" & stepID
+
+End If
+
+If OpLoggedIn > 0 And CaseSelected <> "" And StartStep <> "" And Not CheckIdentifier(identifier) Then
+
+next_row = Sheets("ObservationTracker").Range("B" & Rows.Count).End(xlUp).Offset(1).Row
+last_row = Sheets("ObservationTracker").Range("B" & Rows.Count).End(xlUp).Offset(0).Row
+Sheets("ObservationTracker").Cells(next_row, 4).Value = CaseSelected
+Sheets("ObservationTracker").Cells(next_row, 6).Value = OperatorName
+Sheets("ObservationTracker").Cells(next_row, 7).Value = StartStep
+Sheets("ObservationTracker").Cells(next_row, 8).Value = "In Progress"
+'Sheets("ObservationTracker").Cells(next_row, 9).Value =
+Sheets("ObservationTracker").Cells(next_row, 10).Value = Now()
+'Sheets("ObservationTracker").Cells(next_row, 5).Value = Range("CompanyCode").Value
+Sheets("ObservationTracker").Cells(next_row, 5).Value = identifier
+Sheets("ObservationTracker").Cells(next_row, 3).Value = Worksheets("Parameters").Range("LastStepRegNum").Value + 1
+Sheets("ObservationTracker").Cells(next_row, 2).Value = "=D" & CStr(next_row) & "&M" & CStr(next_row)
+
+Worksheets("Parameters").Range("LastStepRegNum").Value = Worksheets("Parameters").Range("LastStepRegNum").Value + 1
+
+'checkContractSteps = CaseSelected & "-" & Range("StartStep").Value
+'CheckContract = FindMatchingValue(checkContractSteps)
+
+Worksheets("ObservationTracker").Range("FinishWorkStepID").Value = CaseSelected
+Worksheets("ObservationTracker").Range("FinishStepName").Value = StartStep
+Worksheets("ObservationTracker").Range("FinishStepSTatus").Value = "In Progress"
+Worksheets("ObservationTracker").Range("CaseRegNumCreated").Value = ""
+
+iWarningLabels = ClearWarningLabels(1)
+
+
+ElseIf OpLoggedIn = 0 Then
+Worksheets("ObservationTracker").Range("OpLogInWarning").Value = "Select Operator"
+
+ElseIf CaseSelected = "" Then
+Worksheets("ObservationTracker").Range("StepContractWarning").Value = "Select Contract"
+
+ElseIf StartStep = "" Then
+Worksheets("ObservationTracker").Range("StartStepWarningLabel").Value = "Select Step To Enter"
+
+ElseIf CheckIdentifier(identifier) Then
+Worksheets("ObservationTracker").Range("StartStepWarningLabel").Value = "Open Step Present for this contract, please complete"
+
+
+
+'ElseIf LastStepStatus = "In Progress" Then
+'Worksheets("ObservationTracker").Range("StartStepWarningLabel").Value = "Step in progress, please complete"
+
+'ElseIf LastStepStatus = "On Hold" Then
+'Worksheets("ObservationTracker").Range("StartStepWarningLabel").Value = "Step on hold, please complete"
+
+
+End If
+
+End Sub
+
+Function FindMatchingValue(contract As String) As Boolean
+    Dim i As Integer, Check As Boolean
+           For i = 41 To 500
+            If Sheets("ObservationTracker").Cells(i, 13).Value = contract Then
+                FindMatchingValue = True
+            Exit Function
+        End If
+    Next i
+FindMatchingValue = False
+End Function
+
+Public Sub OpenCase()
+
+
+'--------------------VARIABLES-----------------------------
+Dim OpLoggedIn As Integer
+Dim OperatorName As String
+Dim CaseSelected As String
+Dim FindString As String
+Dim RngCase As Range
+Dim RngStep As Range
+
+
+'--------------------CLEAR WARNINGS-----------------------------
+
+Worksheets("ObservationTracker").Range("OpLogInWarning").Value = ""
+Worksheets("ObservationTracker").Range("CaseIDWarning").Value = ""
+Worksheets("ObservationTracker").Range("OpenedCase").Value = ""
+'Worksheets("ObservationTracker").Range("LastStepName").Value = ""
+'Worksheets("ObservationTracker").Range("LastStepStatus").Value = ""
+'Worksheets("ObservationTracker").Range("CaseIDFoundFlag").Value = ""
+'Worksheets("ObservationTracker").Range("CaseCompanyFound").Value = ""
+'Worksheets("ObservationTracker").Range("CaseMonthEndFound").Value = ""
+'Worksheets("ObservationTracker").Range("CaseIDFoundFlag").Value = ""
+
+'--------------------VALIDATION-----------------------------
+OperatorName = Range("OperatorName").Value
+OpLoggedIn = 1
+If OperatorName = "" Then OpLoggedIn = 0
+
+CaseSelected = ""
+CaseSelected = Range("CaseSelected").Value
+
+'--------------------WORK-----------------------------
+
+If CaseSelected <> "" Then
+
+    With Sheets("ObservationTracker").Range("D41:D99999")
+    .Cells(1, 1).Activate
+        Set RngCase = .Find(What:=CaseSelected, _
+                        After:=.Cells(.Cells.Count), _
+                        LookIn:=xlValues, _
+                        LookAt:=xlWhole, _
+                        SearchOrder:=xlByRows, _
+                        SearchDirection:=xlNext, _
+                        MatchCase:=False)
+        If Not RngCase Is Nothing Then
+            Worksheets("ObservationTracker").Range("CaseIDWarning").Value = "Case ID Found" 'value found
+            Worksheets("ObservationTracker").Range("CaseIDFoundFlag").Value = "Y" 'value found
+            Worksheets("ObservationTracker").Range("OpenedCase").Value = CaseSelected 'value found
+        Else
+            Worksheets("ObservationTracker").Range("CaseIDWarning").Value = "Nothing Found"  'value not found
+            Worksheets("ObservationTracker").Range("CaseIDFoundFlag").Value = "N" 'value found
+        End If
+    End With
+
+
+ElseIf CaseSelected = "" Then
+Worksheets("ObservationTracker").Range("CaseIDWarning").Value = "Enter Case ID"
+
+End If
+
+
+End Sub
+
+
+Public Sub CreateCase()
+
+'--------------------VARIABLES-----------------------------
+Dim OpLoggedIn As Integer
+Dim OperatorName As String
+Dim CompanyCode As Integer
+Dim CaseSelected As String
+
+
+'--------------------CLEAR WARNINGS-----------------------------
+Worksheets("ObservationTracker").Range("OpLogInWarning").Value = ""
+Worksheets("ObservationTracker").Range("ContractID_Warning").Value = ""
+
+'--------------------VALIDATION-----------------------------
+OperatorName = Range("OperatorName").Value
+OpLoggedIn = 1
+If OperatorName = "" Then OpLoggedIn = 0
+
+CaseSelected = ""
+CaseSelected = Range("CaseRegNumCreated").Value
+
+
+'--------------------WORK-----------------------------
+If OpLoggedIn > 0 And CaseSelected <> "" And Not CheckContract(CaseSelected) Then
+
+next_row = Sheets("Contracts").Range("B" & Rows.Count).End(xlUp).Offset(1).Row
+Sheets("Contracts").Cells(next_row, 2).Value = Worksheets("Parameters").Range("CaseIDParam").Value + 1
+Worksheets("Parameters").Range("CaseIDParam").Value = Worksheets("Parameters").Range("CaseIDParam").Value + 1
+Sheets("Contracts").Cells(next_row, 3).Value = CStr(CaseSelected)
+'Sheets("Contracts").Cells(next_row, 4).Value = Worksheets("ObservationTracker").Range("CompanyCode").Value
+Sheets("Contracts").Cells(next_row, 5).Value = Now()
+Sheets("Contracts").Cells(next_row, 6).Value = Worksheets("ObservationTracker").Range("OperatorName").Value
+Worksheets("ObservationTracker").Range("CaseRegNumCreated").Value = Sheets("Contracts").Cells(next_row, 3).Value
+'Worksheets("Parameters").Range("LastCaseRegNum").Value = Worksheets("Parameters").Range("LastCaseRegNum").Value + 1
+Worksheets("ObservationTracker").Range("Extract").Value = CStr(CaseSelected)
+
+ClearWarningLabels (1)
+
+
+ElseIf OpLoggedIn = 0 Then
+Worksheets("ObservationTracker").Range("OpLogInWarning").Value = "Select Operator"
+
+ElseIf CaseSelected = "" Then
+Worksheets("ObservationTracker").Range("ContractID_Warning").Value = "Enter Contract Number"
+
+ElseIf CheckContract(CaseSelected) Then
+Worksheets("ObservationTracker").Range("ContractID_Warning").Value = "Contract Already Exist. Insert New."
+
+End If
+
+End Sub
+
+
+Public Sub FinishStep()
+
+
+'--------------------VARIABLES-----------------------------
+Dim OpLoggedIn As Integer
+Dim OperatorName As String
+Dim RngStep As Range
+Dim dblStepID As String
+Dim currentStepName As String
+Dim iID, RowNum As Integer
+Dim strNewStatus As String
+Dim rngStepIDs As Range
+Dim strFinishStepReasonCode As String
+Dim strFinishStepAction As String
+Dim Status As String
+
+'--------------------CLEAR WARNINGS-----------------------------
+
+Worksheets("ObservationTracker").Range("lblFinishStepWarning").Value = ""
+
+'--------------------VALIDATION-----------------------------
+OperatorName = Range("OperatorName").Value
+OpLoggedIn = 1
+If OperatorName = "" Then OpLoggedIn = 0
+
+dblStepID = ""
+If (Worksheets("ObservationTracker").Range("FInishWorkStepID").Value) <> "" Then
+dblStepID = Worksheets("ObservationTracker").Range("FInishWorkStepID").Value
+End If
+
+currentStepName = ""
+If (Worksheets("ObservationTracker").Range("FinishStepName").Value) <> "" Then
+currentStepName = Worksheets("ObservationTracker").Range("FinishStepName").Value
+End If
+
+Status = ""
+If (Worksheets("ObservationTracker").Range("FinishStepSTatus").Value) <> "" Then
+Status = Worksheets("ObservationTracker").Range("FinishStepSTatus").Value
+End If
+
+'--------------------WORK-----------------------------
+   
+    If OpLoggedIn = 1 And (dblStepID <> "") And (currentStepName <> "") And (Status <> "") Then
+        'Find the ID in IDNums
+            
+        iRowL = Worksheets("ObservationTracker").Cells(Rows.Count, 5).End(xlUp).Row
+         Dim i As Integer
+           For i = 41 To iRowL
+            If (Worksheets("ObservationTracker").Cells(i, 4).Value = dblStepID) And (Worksheets("ObservationTracker").Cells(i, 7).Value = currentStepName) And (Worksheets("ObservationTracker").Cells(i, 8).Value <> Status) Then
+                Worksheets("ObservationTracker").Cells(i, 8).Value = Status
+                Worksheets("ObservationTracker").Cells(i, 13).Value = Worksheets("ObservationTracker").Range("FinishStepComments").Value
+                Worksheets("ObservationTracker").Cells(i, 12).Value = Worksheets("ObservationTracker").Range("OperatorName").Value
+                Worksheets("ObservationTracker").Cells(i, 11) = Now()
+                
+                Worksheets("ObservationTracker").Range("CaseRegNumCreated").Value = ""
+                Worksheets("ObservationTracker").Range("Extract").Value = dblStepID
+                Worksheets("ObservationTracker").Range("StartStep").Value = currentStepName
+                Worksheets("ObservationTracker").Range("FinishStepSTatus").Value = ""
+                Worksheets("ObservationTracker").Range("FinishStepComments").Value = ""
+                
+                ClearWarningLabels (1)
+                Exit For
+            ElseIf (Worksheets("ObservationTracker").Cells(i, 4).Value = dblStepID) And (Worksheets("ObservationTracker").Cells(i, 7).Value = currentStepName) And (Worksheets("ObservationTracker").Cells(i, 8).Value = Status) Then
+                Worksheets("ObservationTracker").Range("FinishStatusWarning").Value = "Step present in this status. Select Status to Modify!"
+                Exit For
+            End If
+        Next i
+   
+        
+    ElseIf dblStepID = "" Then
+        Worksheets("ObservationTracker").Range("FinishContractWarning").Value = "Select Contract!"
+    
+    ElseIf currentStepName = "" Then
+        Worksheets("ObservationTracker").Range("FinishStepWarning").Value = "Select Step to Modify!"
+        
+    ElseIf Status = "" Then
+        Worksheets("ObservationTracker").Range("FinishStatusWarning").Value = "Select Status to Update!"
+    
+    End If
+
+
+End Sub
+
+Function ClearWarningLabels(iIndicator As Integer) As Integer
+
+Dim iInd As Integer
+
+iInd = iIndicator
+
+If iInd = 1 Then
+
+Worksheets("ObservationTracker").Range("OpLogInWarning").Value = ""
+Worksheets("ObservationTracker").Range("ContractID_Warning").Value = ""
+Worksheets("ObservationTracker").Range("StartStepWarningLabel").Value = ""
+Worksheets("ObservationTracker").Range("lblFinishStepWarning").Value = ""
+Worksheets("ObservationTracker").Range("StepContractWarning").Value = ""
+Worksheets("ObservationTracker").Range("FinishContractWarning").Value = ""
+Worksheets("ObservationTracker").Range("FinishStepWarning").Value = ""
+Worksheets("ObservationTracker").Range("FinishStatusWarning").Value = ""
+
+End If
+
+
+End Function
+
+Function CheckContract(Cont As String) As Boolean
+
+iRowL = Worksheets("Contracts").Cells(Rows.Count, 2).End(xlUp).Row
+Dim i As Integer
+    For i = 4 To iRowL
+        If Worksheets("Contracts").Cells(i, 3) = Cont Then
+        CheckContract = True
+        Exit For
+        End If
+   
+   Next i
+
+
+End Function
+
+Function CheckIdentifier(id As String) As Boolean
+
+iRowL = Worksheets("ObservationTracker").Cells(Rows.Count, 5).End(xlUp).Row
+Dim i As Integer
+    For i = 40 To iRowL
+        If Worksheets("ObservationTracker").Cells(i, 5) = id Then
+        CheckIdentifier = True
+        Exit For
+        End If
+   
+   Next i
+
+
+End Function
+
+Function LoadCurrentStep(iCaseID As Integer) As Integer
+
+Dim OpLoggedIn As Integer
+Dim OperatorName As String
+Dim CompanyCode As Integer
+
+
+'OpenedCase
+'LastStepName
+'LastStepStatus
+
+
+
+GetLastStep = iCaseID
+
+End Function
+
+
